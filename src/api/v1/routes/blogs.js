@@ -26,6 +26,7 @@ router.get("/single", singleBlog);
 router.get("/:id", singleBlogById);
 router.patch("/:id", verifyAdmin, updateBlogs);
 router.delete("/:id", verifyAdmin, deleteBlog);
+
 router.post("/deleteMany", deleteMany);
 router.post("/updatedMany", updatePauseMany);
 router.post("/updatedpublishMany", updatePablishMany);
