@@ -18,6 +18,7 @@ const verifyAdmin = require("../middleware/adminCheck");
 const router = express.Router();
 
 router.post("/", addBlog);
+
 router.get("/", getBlog);
 router.get("/sitemap", getSitemap);
 router.get("/admin", getBlogAdmin);
