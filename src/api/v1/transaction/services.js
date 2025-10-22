@@ -51,6 +51,70 @@ exports.getTransactionsServices = async ({ q }) => {
     return response;
   }
 };
+
+exports.getTransactionsListServices = async ({
+  q = "",
+  page = 1,
+  limit = 10,
+  sortBy = "createdAt",
+  sortOrder = "desc",
+}) => {
+  const response = {
+    code: 200,
+    status: "success",
+    message: "Transactions fetched successfully",
+    data: [],
+    pagination: {},
+  };
+
+  try {
+    const skip = (Number(page) - 1) * Number(limit);
+    const sortDirection = sortOrder === "asc" ? 1 : -1;
+
+    // Build filter
+    const filter = {};
+    if (q) {
+      filter.$or = [
+        { email: { $regex: q, $options: "i" } },
+        { trxId: { $regex: q, $options: "i" } },
+      ];
+    }
+
+    // Count total matched documents
+    const total = await Transactions.countDocuments(filter);
+
+    // Fetch paginated transactions
+    const transactions = await Transactions.find(filter)
+      .populate("userId")
+      .select("-__v -isDelete")
+      .sort({ [sortBy]: sortDirection })
+      .skip(skip)
+      .limit(Number(limit));
+
+    if (transactions.length === 0) {
+      response.code = 404;
+      response.status = "failed";
+      response.message = "No transactions found";
+      return response;
+    }
+
+    response.data = transactions;
+    response.pagination = {
+      total,
+      page: Number(page),
+      limit: Number(limit),
+    };
+
+    return response;
+  } catch (error) {
+    console.error("Error fetching transactions:", error);
+    response.code = 500;
+    response.status = "failed";
+    response.message = "An error occurred while fetching transactions.";
+    return response;
+  }
+};
+
 exports.getTransactionsUserServices = async ({ q }) => {
   const response = {
     code: 200,

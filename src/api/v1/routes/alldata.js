@@ -1,62 +1,96 @@
 const express = require("express");
+const { Posts, Blogs, User, Transactions } = require("../models");
 const verifyAdmin = require("../middleware/adminCheck");
-const { Product, Blogs, User, Transactions } = require("../models");
 const router = express.Router();
 
 router.get("/", verifyAdmin, async (req, res) => {
-  const allProducts = await Product.countDocuments({});
-  const allPremiumProducts = await Product.find({
-    isPremium: false,
-  }).countDocuments({});
+  try {
+    // 🕒 Define once
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  let today = new Date().toDateString();
+    // 🧠 Run all independent queries in parallel
+    const [
+      allProducts,
+      allPremiumProducts,
+      todayPost,
+      allBlogs,
+      allUsers,
+      allCreditsAgg,
+      allTodayTrans,
+      todayTransAmountAgg,
+      totalTransctionCreditsAgg,
+      monthlySalesAgg,
+    ] = await Promise.all([
+      // count total posts
+      Posts.countDocuments({}),
 
-  const todayPost = await Product.find({
-    createdAt: { $gte: today },
-  }).countDocuments({});
+      // count premium posts
+      Posts.countDocuments({ isPremium: true }),
 
-  const allBlogs = await Blogs.countDocuments({});
-  const allUsers = await User.countDocuments({});
+      // today's posts
+      Posts.countDocuments({ createdAt: { $gte: today } }),
 
-  const allCredits = await User.aggregate([
-    { $group: { _id: null, totalCredits: { $sum: "$credit" } } },
-  ]);
+      // blogs
+      Blogs.countDocuments({}),
 
-  const allTodayTrans = await Transactions.find({
-    createdAt: { $gte: today },
-  }).countDocuments({});
+      // users
+      User.countDocuments({}),
 
-  let todays = new Date();
-  todays.setHours(0, 0, 0, 0);
-  const todayTransAmount = await Transactions.aggregate([
-    { $match: { createdAt: { $gte: todays } } },
-    { $group: { _id: null, totalCredits: { $sum: "$amount" } } },
-  ]);
+      // total credits
+      User.aggregate([
+        { $group: { _id: null, totalCredits: { $sum: "$credit" } } },
+      ]),
 
-  const totalTransctionCredits = await Transactions.aggregate([
-    { $group: { _id: null, totalCredits: { $sum: "$amount" } } },
-  ]);
+      // today's transactions
+      Transactions.countDocuments({ createdAt: { $gte: today } }),
 
-  const data = {
-    allPost: allProducts,
-    premiumPost: allPremiumProducts,
-    today: todayPost,
-    allBlogs: allBlogs,
-    allCredits: allCredits[0].totalCredits,
-    allUsers: allUsers,
-    allTodayTrans: allTodayTrans,
-    todayTransAmount: todayTransAmount[0]?.totalCredits
-      ? todayTransAmount[0]?.totalCredits
-      : 0,
-    todayTransAmount: todayTransAmount[0]?.totalCredits
-      ? todayTransAmount[0]?.totalCredits
-      : 0,
-    totalTransctions: totalTransctionCredits[0]?.totalCredits
-      ? totalTransctionCredits[0]?.totalCredits
-      : 0,
-  };
+      // today's transaction total
+      Transactions.aggregate([
+        { $match: { createdAt: { $gte: today } } },
+        { $group: { _id: null, totalCredits: { $sum: "$amount" } } },
+      ]),
 
-  res.send(data);
+      // total transaction credits
+      Transactions.aggregate([
+        { $group: { _id: null, totalCredits: { $sum: "$amount" } } },
+      ]),
+
+      // monthly sales chart
+      Transactions.aggregate([
+        {
+          $group: {
+            _id: { $month: "$createdAt" },
+            total: { $sum: "$amount" },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+    ]);
+
+    const monthlySalesData = Array(12).fill(0);
+    monthlySalesAgg.forEach((m) => {
+      monthlySalesData[m._id - 1] = m.total;
+    });
+
+    const data = {
+      allPost: allProducts,
+      premiumPost: allPremiumProducts,
+      today: todayPost,
+      allBlogs,
+      allCredits: allCreditsAgg[0]?.totalCredits || 0,
+      allUsers,
+      transactionsChart: monthlySalesData,
+      allTodayTrans,
+      todayTransAmount: todayTransAmountAgg[0]?.totalCredits || 0,
+      totalTransctions: totalTransctionCreditsAgg[0]?.totalCredits || 0,
+    };
+
+    res.json(data);
+  } catch (error) {
+    console.error("Error fetching dashboard data:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
 });
 
 module.exports = router;

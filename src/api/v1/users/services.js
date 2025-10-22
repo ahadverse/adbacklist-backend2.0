@@ -84,7 +84,52 @@ exports.addUserService = async (req, res) => {
 exports.signinUsers = async (req, res) => {
   try {
     const { email, password } = req.body;
+    const emails = email.toLowerCase();
+    const user = await User.findOne({ email: emails });
+    if (!user) {
+      return res.status(422).json({
+        Success: false,
+        code: 401,
+        message: "User Not Found",
+      });
+    }
+    const isPasswordMatched = await bcrypt.compare(password, user.password);
+    if (isPasswordMatched) {
+      const token = generateJwtToken({
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        avater: user.avater,
+        email: user.email,
+        role: user.role,
+      });
 
+      res.status(200).json({
+        message: "success",
+        token,
+        user,
+      });
+    } else {
+      return res.status(422).json({
+        Success: false,
+        code: 422,
+        message: "Invalid Credential",
+      });
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(401).json({
+      Success: false,
+      code: 401,
+      message: "Invalid Credential",
+      error: error,
+    });
+  }
+};
+
+exports.signinAdmins = async (req, res) => {
+  try {
+    const { email, password } = req.body;
     const emails = email.toLowerCase();
 
     const user = await User.findOne({ email: emails });
@@ -94,6 +139,15 @@ exports.signinUsers = async (req, res) => {
         Success: false,
         code: 401,
         message: "User Not Found",
+      });
+    }
+
+    // Check if user role is superAdmin
+    if (user.role !== "superAdmin") {
+      return res.status(403).json({
+        success: false,
+        code: 403,
+        message: "Access denied. Not a superAdmin.",
       });
     }
 
@@ -116,7 +170,7 @@ exports.signinUsers = async (req, res) => {
       });
     } else {
       return res.status(422).json({
-        Success: false,
+        success: false,
         code: 422,
         message: "Invalid Credential",
       });

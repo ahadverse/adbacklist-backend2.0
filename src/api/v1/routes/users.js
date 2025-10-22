@@ -58,6 +58,7 @@ const {
   test,
   adminLogin,
   YesbackpageLive,
+  signinAdmins,
 } = require("../users/services");
 const verifyToken = require("../middleware/checkLogin");
 const verifyAdmin = require("../middleware/adminCheck");
@@ -66,7 +67,7 @@ const router = express.Router();
 
 router.post("/", addUserService);
 router.post("/login", signinUsers);
-router.post("/admin/login", adminLogin);
+router.post("/admin/login", signinAdmins);
 
 router.post("/save", saveUser);
 router.get("/", getUsersService);

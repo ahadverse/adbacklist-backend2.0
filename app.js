@@ -3,7 +3,8 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const morgan = require("morgan");
 const { readdirSync } = require("fs");
-const bodyParser = require("body-parser");
+const cron = require("node-cron");
+const { updateDataStatus } = require("./src/api/v1/service/premiumDays");
 require("dotenv").config();
 
 const app = express();
@@ -39,6 +40,11 @@ readdirSync("./src/api/v1/routes").map((route) =>
 
 app.get("/", (req, res) => {
   res.json({ message: "server is running" });
+});
+
+cron.schedule("0 0 * * *", async () => {
+  console.log(`[${new Date().toISOString()}] 🔄 Running daily update job...`);
+  await updateDataStatus();
 });
 
 module.exports = app;
