@@ -1032,7 +1032,8 @@ exports.searchProductService = async ({ q }) => {
 // get one Postss by id
 exports.getOnlyUserPosts = async ({
   id,
-  page,
+  page = 1,
+  limit = 10,
   status,
   category,
   searchText,
@@ -1043,13 +1044,11 @@ exports.getOnlyUserPosts = async ({
     status: "success",
     message: "Fetch deatiled Posts successfully",
     data: {},
-    pages: 0,
-    startIndex: 0,
+    pagination: {},
   };
 
   try {
     const pageNumber = page ? parseInt(page) : 1;
-    const limit = 10;
     const skipCount = (pageNumber - 1) * limit;
     const regex = new RegExp(searchText, "i");
 
@@ -1177,11 +1176,15 @@ exports.getOnlyUserPosts = async ({
       return response;
     }
 
+    response.pagination = {
+      total: await Posts.find(forPage).countDocuments({}),
+      page: Number(page),
+      limit: Number(limit),
+    };
     response.startIndex = skipCount + 1;
     response.data = {
       posts,
     };
-    response.pages = await Posts.find(forPage).countDocuments({});
 
     return response;
   } catch (error) {

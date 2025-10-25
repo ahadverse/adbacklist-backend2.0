@@ -6,6 +6,7 @@ const {
   updateTransactions,
   getTransactionUser,
   getTransactionList,
+  getTransactionListById,
 } = require("../transaction/controllers");
 const verifyAdmin = require("../middleware/adminCheck");
 const { getTransactionsService } = require("../transaction/services");
@@ -13,8 +14,9 @@ const router = express.Router();
 
 router.post("/", addTransaction);
 router.get("/list", verifyAdmin, getTransactionList);
+router.get("/user", verifyAdmin, getTransactionListById);
 router.get("/", getTransaction);
-router.get("/user", getTransactionUser);
+// router.get("/user", getTransactionUser);
 router.get("/:id", getTransactionsService);
 router.patch("/:id", verifyAdmin, updateTransactions);
 router.delete("/:id", verifyAdmin, deleteTransaction);

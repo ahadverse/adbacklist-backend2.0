@@ -231,15 +231,12 @@ exports.rejectedPost = async (req, res) => {
 
 // get one Products
 exports.getPosterPost = async (req, res) => {
-  const { status, code, message, data, pages, startIndex } =
-    await getOnlyUserPosts({
-      ...req.params,
-      ...req.query,
-    });
+  const { status, code, message, data, pagination } = await getOnlyUserPosts({
+    ...req.params,
+    ...req.query,
+  });
   if (data) {
-    return res
-      .status(code)
-      .json({ code, status, message, data, pages, startIndex });
+    return res.status(code).json({ code, status, message, data, pagination });
   }
   res.status(code).json({ code, status, message });
 };

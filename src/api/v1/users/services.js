@@ -188,8 +188,7 @@ exports.signinAdmins = async (req, res) => {
 
 // get all Users
 exports.getUsersService = async (req, res) => {
-  const { q, page, size } = req.query;
-
+  const { q, page, limit } = req.query;
   let query = { isDelete: false };
   if (q !== "undefined" || q !== undefined || q) {
     let regex = new RegExp(q, "i");
@@ -199,23 +198,23 @@ exports.getUsersService = async (req, res) => {
     };
   }
 
-  const totalDocuments = await User.countDocuments({});
-  const pageNumber = page ? parseInt(page) : 1;
-  const limit = size ? parseInt(size) : 10;
-  const skipCount = (pageNumber - 1) * limit;
+  const skip = (Number(page) - 1) * Number(limit);
 
   const users = await User.find({
     ...query,
     role: { $ne: "admin" },
   })
     .sort({ createdAt: -1 })
-    .skip(skipCount)
+    .skip(skip)
     .limit(limit);
 
-  const startIndex = skipCount + 1;
-  const endIndex = skipCount + users.length;
+  const pagination = {
+    total: await User.countDocuments({}),
+    page: Number(page),
+    limit: Number(limit),
+  };
 
-  res.status(200).json({ users, totalDocuments, startIndex });
+  res.status(200).json({ users, pagination });
 };
 
 // update Users

@@ -4,6 +4,7 @@ const {
   updateTransactionServices,
   deleteTransactionServices,
   getTransactionsListServices,
+  getTransactionsListServicesById,
 } = require("./services");
 
 exports.addTransaction = async (req, res) => {
@@ -27,6 +28,16 @@ exports.getTransaction = async (req, res) => {
 exports.getTransactionList = async (req, res) => {
   const { status, code, message, data, pagination } =
     await getTransactionsListServices({
+      ...req.query,
+    });
+  if (data) {
+    return res.status(code).json({ code, status, message, data, pagination });
+  }
+  res.status(code).json({ code, status, message });
+};
+exports.getTransactionListById = async (req, res) => {
+  const { status, code, message, data, pagination } =
+    await getTransactionsListServicesById({
       ...req.query,
     });
   if (data) {
