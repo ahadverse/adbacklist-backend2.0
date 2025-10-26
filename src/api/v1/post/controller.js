@@ -23,6 +23,7 @@ const {
   runningPostService,
   rejectedPostService,
   getAllCategoryPost,
+  getPostsListService,
 } = require("./service");
 
 // add Products
@@ -100,14 +101,13 @@ exports.getAdminPost = async (req, res) => {
 
 // get all Products
 exports.getPosts = async (req, res) => {
-  const { status, code, message, data, totalPost, startIndex } =
-    await getApprovedService({
+  const { status, code, message, data, pagination } = await getPostsListService(
+    {
       ...req.query,
-    });
+    }
+  );
   if (data) {
-    return res
-      .status(code)
-      .json({ code, status, message, data, totalPost, startIndex });
+    return res.status(code).json({ code, status, message, data, pagination });
   }
   res.status(code).json({ code, status, message });
 };

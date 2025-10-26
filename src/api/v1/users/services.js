@@ -188,7 +188,8 @@ exports.signinAdmins = async (req, res) => {
 
 // get all Users
 exports.getUsersService = async (req, res) => {
-  const { q, page, limit } = req.query;
+  const { q, page, limit, sortOrder } = req.query;
+  console.log(sortOrder);
   let query = { isDelete: false };
   if (q !== "undefined" || q !== undefined || q) {
     let regex = new RegExp(q, "i");
@@ -199,12 +200,13 @@ exports.getUsersService = async (req, res) => {
   }
 
   const skip = (Number(page) - 1) * Number(limit);
+  const sortDirection = sortOrder === "asc" ? 1 : -1;
 
   const users = await User.find({
     ...query,
     role: { $ne: "admin" },
   })
-    .sort({ createdAt: -1 })
+    .sort({ createdAt: sortDirection })
     .skip(skip)
     .limit(limit);
 
@@ -326,10 +328,9 @@ exports.updateCreditService = async ({ id, credit }) => {
 
   try {
     const prevUser = await User.findById(id).select("credit");
-    const data = { credit: prevUser?.credit + parseInt(credit) };
+    const data = { credit: prevUser?.credit + Number(credit) };
     const user = await User.findByIdAndUpdate(id, data, { new: true });
     response.data.user = user;
-
     return response;
   } catch (error) {
     response.code = 500;

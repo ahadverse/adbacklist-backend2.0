@@ -45,7 +45,7 @@ router.get("/sitemap2", getPostsSitemapSecond);
 router.get("/sitemap3", getPostsSitemapThird);
 router.get("/sitemap4", getPostsSitemapFourth);
 
-router.patch("/approved/:id", verifyAdmin, updateApprove);
+router.put("/approved/:id", verifyAdmin, updateApprove);
 
 router.post("/many", updateApproveMany);
 

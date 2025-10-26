@@ -52,283 +52,136 @@ const endOfYear = moment().endOf("year");
 const startOfPreviousYear = moment().subtract(1, "year").startOf("year");
 const endOfPreviousYear = moment().subtract(1, "year").endOf("year");
 
-exports.getApprovedService = async ({
-  page,
+exports.getPostsListService = async ({
+  page = 1,
+  limit = 10,
   cat,
   subCat,
   date,
-  searchText,
+  q,
+  sortOrder = "desc",
+  isApproved,
 }) => {
   const response = {
     code: 200,
     status: "success",
-    message: "Fetch Posts list successfully",
-    data: {},
-    totalPost: 0,
-    startIndex: 0,
+    message: "Fetched posts list successfully",
+    data: [],
+    pagination: {},
   };
 
-  const regex = new RegExp(cat, "i");
-  const subRegex = new RegExp(subCat, "i");
-
   try {
-    const pageNumber = page ? parseInt(page) : 1;
-    const limit = 10;
-    const skipCount = (pageNumber - 1) * limit;
+    // Pagination setup
+    const pageNumber = parseInt(page);
+    const limitNumber = parseInt(limit);
+    const skipCount = (pageNumber - 1) * limitNumber;
+
+    const query = {};
+
+    if (isApproved === "true") {
+      query.isApproved = true;
+    } else {
+      query.isApproved = false;
+    }
+    console.log(query);
+    if (cat) query.category = new RegExp(cat, "i");
+    if (subCat) query.subCategory = new RegExp(subCat, "i");
 
     let newDate;
-    if (date == "today") {
-      newDate = {
-        $gte: startOfDay.toDate(),
-        $lte: endOfDay.toDate(),
-      };
+    const today = moment();
+    const startOfDay = today.startOf("day");
+    const endOfDay = today.endOf("day");
+
+    switch (date) {
+      case "today":
+        newDate = { $gte: startOfDay.toDate(), $lte: endOfDay.toDate() };
+        break;
+      case "yesterday":
+        newDate = {
+          $gte: today.subtract(1, "day").startOf("day").toDate(),
+          $lt: startOfDay.toDate(),
+        };
+        break;
+      case "last3days":
+        newDate = { $gte: today.subtract(3, "day").startOf("day").toDate() };
+        break;
+      case "last7days":
+        newDate = { $gte: today.subtract(7, "day").startOf("day").toDate() };
+        break;
+      case "thismonth":
+        newDate = {
+          $gte: today.startOf("month").toDate(),
+          $lte: today.endOf("month").toDate(),
+        };
+        break;
+      case "lastmonth":
+        newDate = {
+          $gte: today.subtract(1, "month").startOf("month").toDate(),
+          $lt: today.startOf("month").toDate(),
+        };
+        break;
+      case "thisyear":
+        newDate = {
+          $gte: today.startOf("year").toDate(),
+          $lte: today.endOf("year").toDate(),
+        };
+        break;
+      case "lastyear":
+        newDate = {
+          $gte: today.subtract(1, "year").startOf("year").toDate(),
+          $lt: today.startOf("year").toDate(),
+        };
+        break;
     }
-    if (date == "yesterday") {
-      newDate = {
-        $gte: yesterday.startOf("day").toDate(),
-        $lt: today.startOf("day").toDate(),
-      };
-    }
-    if (date == "last3days") {
-      newDate = {
-        $gte: threeDaysAgo.startOf("day").toDate(),
-      };
-    }
-    if (date == "last3days") {
-      newDate = {
-        $gte: sevenDaysAgo.startOf("day").toDate(),
-      };
+    if (newDate) query.createdAt = newDate;
+
+    // if (q) {
+    //   // const user = await User.findOne({ email: q });
+    //   // if (user?._id) query.posterId = mongoose.Types.ObjectId(user._id);
+    // }
+    if (q) {
+      const regex = new RegExp(q, "i");
+      query.$or = [{ phone: regex }, { email: regex }, { name: regex }];
     }
 
-    if (date == "thismonth") {
-      newDate = {
-        $gte: startOfMonth.toDate(),
-        $lte: endOfMonth.toDate(),
-      };
-    }
-    if (date == "lastmonth") {
-      newDate = {
-        $gte: lastMonthStartDate.toDate(),
-        $lt: currentMonthStartDate.toDate(),
-      };
-    }
-    if (date == "last6month") {
-      newDate = {
-        $gte: sixMonthsAgo.toDate(),
-        $lt: today.startOf("day").toDate(),
-      };
-    }
-    if (date == "thisYear") {
-      newDate = {
-        $gte: startOfYear.toDate(),
-        $lt: endOfYear.startOf("day").toDate(),
-      };
-    }
-    if (date == "lastYear") {
-      newDate = {
-        $gte: startOfPreviousYear.toDate(),
-        $lt: endOfPreviousYear.startOf("day").toDate(),
-      };
-    }
+    const sortDirection = sortOrder === "asc" ? 1 : -1;
 
-    const userData = await User.findOne({ email: searchText });
-    const user = userData?._id?.toString();
+    const posts = await Posts.find(query)
+      .sort({ createdAt: sortDirection })
+      .skip(skipCount)
+      .limit(limitNumber)
+      .select({
+        category: 1,
+        name: 1,
+        subCategory: 1,
+        createdAt: 1,
+        isPremium: 1,
+        isApproved: 1,
+        cities: 1,
+      })
+      .lean();
 
-    let forPage = {};
+    const processedPosts = posts.map((p) => ({
+      ...p,
+      cityCount: Array.isArray(p.cities) ? p.cities.length : 0,
+    }));
 
-    if (cat && subCat && newDate && searchText) {
-      forPage = {
-        category: regex,
-        subCategory: subRegex,
-        createdAt: newDate,
-        posterId: mongoose.Types.ObjectId(user),
-      };
-    } else if (cat && subCat && searchText) {
-      forPage = {
-        category: regex,
-        subCategory: subRegex,
-        posterId: mongoose.Types.ObjectId(user),
-      };
-    } else if (cat && newDate && searchText) {
-      forPage = {
-        category: regex,
-        createdAt: newDate,
-        posterId: mongoose.Types.ObjectId(user),
-      };
-    } else if (newDate && subCat && searchText) {
-      forPage = {
-        createdAt: newDate,
-        subCategory: subRegex,
-        posterId: mongoose.Types.ObjectId(user),
-      };
-    } else if (newDate && searchText) {
-      forPage = {
-        createdAt: newDate,
-        posterId: mongoose.Types.ObjectId(user),
-      };
-    } else if (cat && searchText) {
-      forPage = {
-        category: regex,
-        posterId: mongoose.Types.ObjectId(user),
-      };
-    } else if (subCat && searchText) {
-      forPage = {
-        subCategory: subRegex,
-        posterId: mongoose.Types.ObjectId(user),
-      };
-    } else if (searchText) {
-      forPage = { posterId: mongoose.Types.ObjectId(user) };
-    } else if (cat && subCat && newDate) {
-      forPage = {
-        category: regex,
-        subCategory: subRegex,
-        createdAt: newDate,
-      };
-    } else if (cat && subCat) {
-      forPage = {
-        category: regex,
-        subCategory: subRegex,
-      };
-    } else if (cat && newDate) {
-      forPage = {
-        category: regex,
-        createdAt: newDate,
-      };
-    } else if (newDate && subCat) {
-      forPage = {
-        createdAt: newDate,
-        subCategory: subRegex,
-      };
-    } else if (newDate) {
-      forPage = { createdAt: newDate };
-    } else if (cat) {
-      forPage = { category: regex };
-    } else if (subCat) {
-      forPage = { subCategory: subRegex };
-    } else {
-      forPage = {};
-    }
+    const total = await Posts.countDocuments(query);
+    const pagination = {
+      total,
+      page: pageNumber,
+      limit: limitNumber,
+    };
 
-    const matchStage = {};
-    if (cat && subCat && newDate && searchText) {
-      matchStage.$match = {
-        category: regex,
-        subCategory: subRegex,
-        createdAt: newDate,
-        posterId: mongoose.Types.ObjectId(user),
-      };
-    } else if (cat && subCat && searchText) {
-      matchStage.$match = {
-        category: regex,
-        subCategory: subRegex,
-        posterId: mongoose.Types.ObjectId(user),
-      };
-    } else if (cat && newDate && searchText) {
-      matchStage.$match = {
-        category: regex,
-        createdAt: newDate,
-        posterId: mongoose.Types.ObjectId(user),
-      };
-    } else if (newDate && subCat && searchText) {
-      matchStage.$match = {
-        createdAt: newDate,
-        subCategory: subRegex,
-        posterId: mongoose.Types.ObjectId(user),
-      };
-    } else if (newDate && searchText) {
-      matchStage.$match = {
-        createdAt: newDate,
-        posterId: mongoose.Types.ObjectId(user),
-      };
-    } else if (cat && searchText) {
-      matchStage.$match = {
-        category: regex,
-        posterId: mongoose.Types.ObjectId(user),
-      };
-    } else if (subCat && searchText) {
-      matchStage.$match = {
-        subCategory: subRegex,
-        posterId: mongoose.Types.ObjectId(user),
-      };
-    } else if (searchText) {
-      matchStage.$match = { posterId: mongoose.Types.ObjectId(user) };
-    } else if (cat && subCat && newDate) {
-      matchStage.$match = {
-        category: regex,
-        subCategory: subRegex,
-        createdAt: newDate,
-      };
-    } else if (cat && subCat) {
-      matchStage.$match = {
-        category: regex,
-        subCategory: subRegex,
-      };
-    } else if (cat && newDate) {
-      matchStage.$match = {
-        category: regex,
-        createdAt: newDate,
-      };
-    } else if (newDate && subCat) {
-      matchStage.$match = {
-        createdAt: newDate,
-        subCategory: subRegex,
-      };
-    } else if (newDate) {
-      matchStage.$match = { createdAt: newDate };
-    } else if (cat) {
-      matchStage.$match = { category: regex };
-    } else if (subCat) {
-      matchStage.$match = { subCategory: subRegex };
-    } else {
-      matchStage.$match = {};
-    }
+    response.data = processedPosts;
+    response.pagination = pagination;
 
-    const posts = await Posts.aggregate([
-      matchStage,
-      {
-        $match: {
-          isApproved: true,
-        },
-      },
-      {
-        $sort: { createdAt: -1 },
-      },
-      { $skip: skipCount },
-      {
-        $limit: limit,
-      },
-      {
-        $project: {
-          category: 1,
-          name: 1,
-          subCategory: 1,
-          createdAt: 1,
-          isPremium: 1,
-          cityCount: {
-            $cond: {
-              if: {
-                $and: [
-                  { $isArray: "$cities" },
-                  { $ne: [{ $size: "$cities" }, 0] },
-                ],
-              },
-              then: { $size: "$cities" },
-              else: 0,
-            },
-          },
-        },
-      },
-    ]);
-
-    response.totalPost = await Posts.find(forPage).countDocuments({});
-    response.startIndex = skipCount + 1;
-    response.data = posts;
     return response;
   } catch (error) {
-    console.log(error);
+    console.error("Error in getPostsListService:", error);
     response.code = 500;
     response.status = "failed";
-    response.message = "Error. Try again a";
+    response.message = "Error while fetching posts list.";
     return response;
   }
 };
@@ -419,36 +272,58 @@ exports.updateApproveService = async ({ id, isApproved }) => {
   const response = {
     code: 200,
     status: "success",
-    message: "Product updated successfully",
+    message: "Post updated successfully",
     data: {},
   };
 
   try {
-    const product = await Posts.findOne({
-      _id: id,
-    }).exec();
-    if (!product) {
-      response.code = 422;
-      response.status = "failed";
-      response.message = "No Posts data found";
-      return response;
+    if (!id) {
+      return {
+        code: 400,
+        status: "failed",
+        message: "Post ID is required",
+        data: {},
+      };
     }
-    if (isApproved == false) {
-      product.isApproved = false;
-      await product.save();
-      response.data.product = product;
-      return response;
-    }
-    product.isApproved = isApproved ? isApproved : product.isApproved;
 
-    await product.save();
-    response.data.product = product;
+    if (typeof isApproved !== "boolean") {
+      return {
+        code: 400,
+        status: "failed",
+        message: "isApproved must be a boolean",
+        data: {},
+      };
+    }
+    console.log(id, isApproved);
+    const updatedPost = await Posts.findByIdAndUpdate(
+      id,
+      { isApproved },
+      { new: true }
+    ).exec();
+
+    if (!updatedPost) {
+      return {
+        code: 404,
+        status: "failed",
+        message: "No post found with the given ID",
+        data: {},
+      };
+    }
+
+    response.data.post = updatedPost;
+    response.message = isApproved
+      ? "Post approved successfully"
+      : "Post disapproved successfully";
+
     return response;
   } catch (error) {
-    response.code = 500;
-    response.status = "failed";
-    response.message = "Error. Try again";
-    return response;
+    console.error("Error updating post approval:", error);
+    return {
+      code: 500,
+      status: "failed",
+      message: "Internal server error. Please try again.",
+      data: {},
+    };
   }
 };
 
@@ -1513,7 +1388,8 @@ exports.updatePostService = async ({ id, data }) => {
   };
 
   try {
-    const posts = await Posts.findByIdAndUpdate(id, data);
+    console.log(id, data);
+    // const posts = await Posts.findByIdAndUpdate(id, data);
     return response;
   } catch (error) {
     console.log(error);

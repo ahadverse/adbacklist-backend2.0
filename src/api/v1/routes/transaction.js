@@ -19,6 +19,7 @@ router.get("/", getTransaction);
 // router.get("/user", getTransactionUser);
 router.get("/:id", getTransactionsService);
 router.patch("/:id", verifyAdmin, updateTransactions);
+router.put("/credit/:id", verifyAdmin, updateTransactions);
 router.delete("/:id", verifyAdmin, deleteTransaction);
 
 module.exports = router;

@@ -1,5 +1,5 @@
 const { default: mongoose } = require("mongoose");
-const { Transactions } = require("../models");
+const { Transactions, User } = require("../models");
 
 exports.addTransactionServices = async ({ body }) => {
   const response = {
@@ -206,7 +206,12 @@ exports.getTransactionsUserServices = async ({ q }) => {
 };
 
 // update Transactions
-exports.updateTransactionServices = async ({ id, isRead }) => {
+exports.updateTransactionServices = async ({
+  id,
+  credit,
+  status,
+  creditGiven,
+}) => {
   const response = {
     code: 200,
     status: "success",
@@ -218,18 +223,24 @@ exports.updateTransactionServices = async ({ id, isRead }) => {
     const transactions = await Transactions.findOne({
       _id: id,
     }).exec();
-    if (!Transactions) {
+    if (!transactions) {
       response.code = 422;
       response.status = "failed";
       response.message = "No Product data found";
       return response;
     }
 
-    transactions.isRead = isRead ? isRead : transactions.isRead;
+    const transaction = await Transactions.findByIdAndUpdate(
+      id,
+      { status, creditGiven },
+      { new: true }
+    );
 
-    await transactions.save();
-
-    response.data.transactions = transactions;
+    const prevUser = await User.findById(transaction?.userId).select("credit");
+    const data = { credit: prevUser?.credit + Number(credit) };
+    const user = await User.findByIdAndUpdate(transaction?.userId, data, {
+      new: true,
+    });
 
     return response;
   } catch (error) {

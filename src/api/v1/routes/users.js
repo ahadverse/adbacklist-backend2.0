@@ -74,7 +74,7 @@ router.get("/", getUsersService);
 
 router.get("/:id", getUser);
 router.patch("/:id", updateUser);
-router.patch("/add-credit/:id", updateCredit);
+router.put("/add-credit/:id", updateCredit);
 router.patch("/address/:id", updateUserAddress);
 router.patch("/password/:id", verifyToken, updatePassword);
 router.delete("/:id", deleteUser);
