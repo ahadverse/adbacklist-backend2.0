@@ -107,6 +107,7 @@ exports.getBlogsServices = async ({
         subCategory: 1,
         createdAt: 1,
         image: 1,
+        permalink: 1,
       })
       .lean();
 

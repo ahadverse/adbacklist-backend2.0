@@ -9,6 +9,7 @@ const Ads = require("../ads/Model");
 const Rainbow = require("../rainbow/Model");
 const Responsive = require("../responsive/Model");
 const Transactions = require("../transaction/Model");
+const TinyMce = require("../tinymce/Model");
 
 module.exports = {
   Posts,
@@ -22,4 +23,5 @@ module.exports = {
   Transactions,
   Rainbow,
   Responsive,
+  TinyMce,
 };

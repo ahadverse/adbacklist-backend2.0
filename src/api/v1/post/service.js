@@ -1387,8 +1387,7 @@ exports.updatePostService = async ({ id, data }) => {
   };
 
   try {
-    console.log(id, data);
-    // const posts = await Posts.findByIdAndUpdate(id, data);
+    const posts = await Posts.findByIdAndUpdate(id, data);
     return response;
   } catch (error) {
     console.log(error);
