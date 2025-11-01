@@ -9,6 +9,6 @@ const router = express.Router();
 
 router.post("/", addLinkResponsive);
 router.get("/", getLinksResponsive);
-router.patch("/:id", updateLinkResponsive);
+router.put("/:id", updateLinkResponsive);
 
 module.exports = router;

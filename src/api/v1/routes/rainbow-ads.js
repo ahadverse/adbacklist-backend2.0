@@ -6,6 +6,6 @@ const router = express.Router();
 
 router.post("/", addLinkRainbow);
 router.get("/", getLinksRainbow);
-router.patch("/:id", updateLinkRainbow);
+router.put("/:id", updateLinkRainbow);
 
 module.exports = router;

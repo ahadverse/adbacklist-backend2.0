@@ -294,7 +294,7 @@ exports.updateApproveService = async ({ id, isApproved }) => {
         data: {},
       };
     }
-    console.log(id, isApproved);
+
     const updatedPost = await Posts.findByIdAndUpdate(
       id,
       { isApproved },
@@ -328,67 +328,66 @@ exports.updateApproveService = async ({ id, isApproved }) => {
 };
 
 exports.updateApproveMany = async (req, res) => {
-  const response = {
-    code: 200,
-    status: "success",
-    message: "Product updated successfully",
-    data: {},
-  };
+  const { ids, isApproved } = req.body;
 
-  const data = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({
+      status: "error",
+      message: "No post IDs provided",
+    });
+  }
 
   const session = await mongoose.startSession();
 
   try {
-    await session.startTransaction();
-    const addCustomerToTheStores = data.map(async (id, index) => {
-      await new Promise((resolve) => setTimeout(resolve, index * 500));
-
-      const updatedStore = await Posts.findByIdAndUpdate(
-        id,
-        { $set: { isApproved: true } },
-        { new: true }
+    await session.withTransaction(async () => {
+      await Posts.updateMany(
+        { _id: { $in: ids } },
+        { $set: { isApproved } },
+        { session }
       );
     });
-    await session.commitTransaction();
-    await session.endSession();
 
-    setTimeout(() => {
-      res
-        .status(200)
-        .json({ status: "success", message: "Post updated successfully" });
-    }, data.length * 500);
-  } catch (e) {
-    console.log(e);
-    res.status(500).json({ message: "Something went wrong in /edit-order" });
+    res.status(200).json({
+      status: "success",
+      message: `Posts ${isApproved ? "approved" : "unapproved"} successfully.`,
+    });
+  } catch (error) {
+    console.error("Bulk approve error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Something went wrong while updating posts.",
+    });
+  } finally {
+    await session.endSession();
   }
 };
 
 exports.deleteMany = async (req, res) => {
-  const ids = req.body;
-
   try {
-    await Posts.deleteMany(
-      {
-        _id: {
-          $in: ids,
-        },
-      },
-      function (err, result) {
-        if (err) {
-          res.json(err);
-        } else {
-          res.json(result);
-        }
-      }
-    );
+    // Expect: { ids: [] }
+    const { ids = [] } = req.body;
 
-    res
-      .status(200)
-      .json({ status: "success", message: "Deleted successfully" });
-  } catch (e) {
-    console.log(e);
-    // res.status(500).json({ message: "Something went wrong in /edit-order" });
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({
+        status: "error",
+        message: "No post IDs provided",
+      });
+    }
+
+    const result = await Posts.deleteMany({ _id: { $in: ids } });
+
+    res.status(200).json({
+      status: "success",
+      message: "Posts deleted successfully",
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    console.error("Bulk delete error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Something went wrong while deleting posts.",
+    });
   }
 };
 

@@ -9,7 +9,6 @@ const router = express.Router();
 router.post("/", addLink);
 router.get("/", getLinks);
 router.get("/header", getLink);
-router.patch("/:id", updateLink);
-
+router.put("/:id", updateLink);
 
 module.exports = router;

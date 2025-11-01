@@ -58,69 +58,75 @@ exports.getBlogsForSitemap = async () => {
   }
 };
 
-exports.getBlogsServices = async ({ q, page, cat }) => {
+exports.getBlogsServices = async ({
+  page = 1,
+  limit = 10,
+  cat,
+  subCat,
+  q,
+  sortOrder = "desc",
+}) => {
   const response = {
     code: 200,
     status: "success",
-    message: "Fetch Blog list successfully",
-    data: {},
-    page: 0,
-    total: 0,
+    message: "Fetched blogs list successfully",
+    data: [],
+    pagination: {},
   };
 
   try {
-    const pageNumber = page ? parseInt(page) : 1;
-    const limit = 7;
-    const skipCount = (pageNumber - 1) * limit;
+    const pageNumber = parseInt(page);
+    const limitNumber = parseInt(limit);
+    const skipCount = (pageNumber - 1) * limitNumber;
 
-    // Build filter dynamically
-    const filter = {};
-    if (q) filter.title = { $regex: new RegExp(q, "i") };
-    if (cat) {
-      if (cat.toLowerCase() === "for sale") {
-        filter.category = { $in: ["For Sell", "For Sale"] };
-      } else {
-        filter.category = { $regex: new RegExp(cat, "i") };
-      }
+    const query = {};
+
+    if (cat) query.category = new RegExp(cat, "i");
+    if (subCat) query.subCategory = new RegExp(subCat, "i");
+
+    if (q) {
+      const regex = new RegExp(q, "i");
+      query.$or = [
+        { title: regex },
+        { category: regex },
+        { subCategory: regex },
+      ];
     }
 
-    // Fetch blogs with aggregation for sorting, pagination, projection
-    const blogs = await Blogs.aggregate([
-      { $match: filter },
-      { $sort: { createdAt: -1 } },
-      { $skip: skipCount },
-      { $limit: limit },
-      {
-        $project: {
-          permalink: 1,
-          title: 1,
-          category: 1,
-          image: 1,
-          metaDesc: 1,
-        },
-      },
-    ]);
+    // ---- SORT ----
+    const sortDirection = sortOrder === "asc" ? 1 : -1;
 
-    if (blogs.length === 0) {
-      response.code = 404;
-      response.status = "failed";
-      response.message = "No blog data found";
-      return response;
-    }
+    // ---- FETCH ----
+    const blogs = await Blogs.find(query)
+      .sort({ createdAt: sortDirection })
+      .skip(skipCount)
+      .limit(limitNumber)
+      .select({
+        title: 1,
+        category: 1,
+        subCategory: 1,
+        createdAt: 1,
+        image: 1,
+      })
+      .lean();
 
-    // Total count for pagination
-    const totalBlogs = await Blogs.countDocuments(filter);
+    const total = await Blogs.countDocuments(query);
 
-    response.page = pageNumber;
-    response.total = totalBlogs;
-    response.data = { blogs };
+    const pagination = {
+      total,
+      page: pageNumber,
+      limit: limitNumber,
+    };
+
+    response.data = blogs;
+    response.pagination = pagination;
 
     return response;
   } catch (error) {
-    console.error(error);
+    console.error("Error in getBlogsServices:", error);
     response.code = 500;
     response.status = "failed";
-    response.message = "Error. Try again";
+    response.message = "Error while fetching blogs list.";
     return response;
   }
 };
@@ -309,18 +315,6 @@ exports.singleBlogByIdServices = async ({ id }) => {
       return response;
     }
 
-    for (const blog of blogs) {
-      if (!blog.image.includes("imagekit")) {
-        const getObjectParams = {
-          Bucket: bucket_Name,
-          Key: blog.image,
-        };
-        const command = new GetObjectCommand(getObjectParams);
-        const url = await getSignedUrl(s3, command, { expiresIn: 3600 });
-        blog.image = url;
-      }
-    }
-
     // console.log(blogs);
     response.data = { blogs };
 
@@ -402,6 +396,7 @@ exports.deleteBlogServices = async ({ id }) => {
       _id: id,
       isDelete: false,
     });
+
     if (!blog) {
       response.code = 404;
       response.status = "failed";
@@ -409,10 +404,11 @@ exports.deleteBlogServices = async ({ id }) => {
       return response;
     }
 
-    await blog.remove();
+    await Blogs.deleteOne({ _id: id }); // delete directly by id
 
     return response;
   } catch (error) {
+    console.log(error);
     response.code = 500;
     response.status = "failed";
     response.message = "Error. Try again";

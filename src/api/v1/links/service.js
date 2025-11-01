@@ -8,7 +8,6 @@ exports.addLinks = async ({ body }) => {
     message: "Product added successfully",
   };
 
-  console.log(body);
   try {
     const newProduct = new Links(body);
     await newProduct.save();
@@ -60,14 +59,12 @@ exports.updateLinks = async (updateFields) => {
 
     return response;
   } catch (error) {
-    console.log(error);
     response.code = 500;
     response.status = "failed";
     response.message = "Error. Try again";
     return response;
   }
 };
-
 
 exports.getLinkService = async (req, res) => {
   const link = await Links.findOne({});

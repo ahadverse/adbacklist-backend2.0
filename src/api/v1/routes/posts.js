@@ -47,9 +47,9 @@ router.get("/sitemap4", getPostsSitemapFourth);
 
 router.put("/approved/:id", verifyAdmin, updateApprove);
 
-router.post("/many", updateApproveMany);
+router.put("/bulk-approve", updateApproveMany);
 
-router.post("/deleteMany", deleteMany);
+router.put("/bulk-delete", deleteMany);
 
 router.get("/", getPosts);
 
