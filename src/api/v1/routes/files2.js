@@ -23,7 +23,6 @@ router.post("/files", upload.array("images", 5), async (req, res) => {
   try {
     const files = req.files;
     const uploadedFiles = [];
-
     for (const file of files) {
       const fileExtention = path.extname(file.originalname);
       const fileName =
@@ -48,7 +47,6 @@ router.post("/files", upload.array("images", 5), async (req, res) => {
       uploadedFiles.push(`https://dk3vy6fruyw6l.cloudfront.net/${fileName}`);
       // uploadedFiles.push(`https://d1wxnh87mbrzoa.cloudfront.net/${fileName}`); arif
     }
-
     res.json(uploadedFiles);
   } catch (error) {
     console.error("Error uploading files to S3:", error);

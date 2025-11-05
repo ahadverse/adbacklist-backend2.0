@@ -11,6 +11,7 @@ const {
   updateCreditService,
   increaseUserCredit,
   saveUser,
+  updateCreditUserService,
 } = require("./services");
 
 // add Users
@@ -33,6 +34,17 @@ exports.addUser = async (req, res) => {
 // update Users
 exports.updateUser = async (req, res) => {
   const { status, code, message, data } = await updateUserService({
+    ...req.params,
+    ...req.body,
+  });
+  if (data.user) {
+    return res.status(code).json({ code, status, message, data });
+  }
+  res.status(code).json({ code, status, message });
+};
+// update Users
+exports.updateUserCredit = async (req, res) => {
+  const { status, code, message, data } = await updateCreditUserService({
     ...req.params,
     ...req.body,
   });

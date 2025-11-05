@@ -5,6 +5,7 @@ const userSchema = Schema(
   {
     firstName: { type: String, trim: true },
     lastName: { type: String, trim: true },
+    isManual: { type: Boolean, default: false },
     email: { type: String, trim: true, lowerCase: true },
     domain: { type: String, trim: true, lowerCase: true },
     phone: { type: String, trim: true },

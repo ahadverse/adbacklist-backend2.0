@@ -46,8 +46,16 @@ exports.saveUser = async (req, res) => {
 };
 
 exports.addUserService = async (req, res) => {
-  const { firstName, lastName, email, address, password, avater, month } =
-    req.body;
+  const {
+    firstName,
+    lastName,
+    email,
+    address,
+    password,
+    avater,
+    month,
+    isManual,
+  } = req.body;
   try {
     const emails = email.toLowerCase();
 
@@ -70,6 +78,7 @@ exports.addUserService = async (req, res) => {
       avater,
       password: hashedPassword,
       address,
+      isManual,
     });
 
     await newUser.save();
@@ -264,15 +273,27 @@ exports.updateUserAddressService = async ({
   }
 };
 
-exports.updateUserService = async ({
-  id,
-  firstName,
-  lastName,
-  email,
-  phone,
-  avater,
-  credit,
-}) => {
+exports.updateUserService = async (payload) => {
+  const { id, ...updates } = payload;
+  const user = await User.findByIdAndUpdate(
+    id,
+    { $set: updates },
+    { new: true }
+  );
+
+  if (!user) {
+    return { code: 404, status: "failed", message: "User not found" };
+  }
+
+  return {
+    code: 200,
+    status: "success",
+    message: "User updated successfully",
+    data: { user },
+  };
+};
+
+exports.updateCreditUserService = async ({ id, credit }) => {
   const response = {
     code: 200,
     status: "success",
@@ -290,12 +311,6 @@ exports.updateUserService = async ({
       response.message = "No User data found";
       return response;
     }
-
-    user.firstName = firstName ? firstName : user.firstName;
-    user.lastName = lastName ? lastName : user.lastName;
-    user.email = email ? email : user.email;
-    user.phone = phone ? phone : user.phone;
-    user.avater = avater ? avater : user.avater;
 
     if (credit == 0) {
       user.credit = 0;

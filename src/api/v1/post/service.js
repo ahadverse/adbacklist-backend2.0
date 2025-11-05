@@ -678,7 +678,7 @@ exports.getAllPosts = async ({ page, category, state }) => {
       cities: { $elemMatch: { $regex: new RegExp(`^${state}$`, "i") } },
       isApproved: true,
     };
-
+    console.log(matching);
     // total counts
     const totalPremium = await Posts.countDocuments({
       ...matching,
